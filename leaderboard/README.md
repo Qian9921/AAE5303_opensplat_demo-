@@ -197,6 +197,7 @@ where:
 #### Reference Code
 
 ```python
+import numpy as np
 import torch
 import lpips
 

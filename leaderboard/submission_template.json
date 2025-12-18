@@ -1,0 +1,11 @@
+{
+    "student_id": "YOUR_STUDENT_ID",
+    "student_name": "Your Name",
+    "metrics": {
+        "psnr": 0.00,
+        "ssim": 0.0000,
+        "lpips": 0.0000
+    },
+    "submission_date": "YYYY-MM-DD"
+}
+

@@ -91,6 +91,28 @@ Please refer to the following documents:
 
 1. **[Report Template](./REPORT_TEMPLATE.md)** - How to write your assignment report
 2. **[Leaderboard Submission Guide](./LEADERBOARD_SUBMISSION_GUIDE.md)** - How to submit for leaderboard evaluation
+3. **[JSON Template](./submission_template.json)** - JSON format for leaderboard submission
+
+---
+
+## 📄 JSON Submission Format
+
+Submit your results in the following JSON format:
+
+```json
+{
+    "student_id": "YOUR_STUDENT_ID",
+    "student_name": "Your Name",
+    "metrics": {
+        "psnr": 25.67,
+        "ssim": 0.8834,
+        "lpips": 0.1052
+    },
+    "submission_date": "YYYY-MM-DD"
+}
+```
+
+> **Note**: The leaderboard website and baseline results will be released later.
 
 ---
 

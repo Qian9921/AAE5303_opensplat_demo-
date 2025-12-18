@@ -6,6 +6,70 @@ This guide explains how to submit your 3D Gaussian Splatting results for leaderb
 
 ---
 
+## 📄 JSON Submission Format
+
+To submit your results to the leaderboard, you need to prepare a JSON file in the following format:
+
+```json
+{
+    "student_id": "YOUR_STUDENT_ID",
+    "student_name": "Your Name",
+    "metrics": {
+        "psnr": 25.67,
+        "ssim": 0.8834,
+        "lpips": 0.1052
+    },
+    "submission_date": "2024-12-17"
+}
+```
+
+### Field Descriptions
+
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `student_id` | string | Your student ID | `"12345678"` |
+| `student_name` | string | Your full name | `"John Doe"` |
+| `metrics.psnr` | number | PSNR value in dB (2 decimal places) | `25.67` |
+| `metrics.ssim` | number | SSIM value (4 decimal places) | `0.8834` |
+| `metrics.lpips` | number | LPIPS value (4 decimal places) | `0.1052` |
+| `submission_date` | string | Date in YYYY-MM-DD format | `"2024-12-17"` |
+
+### Example Submission
+
+```json
+{
+    "student_id": "23456789",
+    "student_name": "Alice Wong",
+    "metrics": {
+        "psnr": 28.45,
+        "ssim": 0.9123,
+        "lpips": 0.0784
+    },
+    "submission_date": "2024-12-17"
+}
+```
+
+### File Naming
+
+Save your JSON file as: `{StudentID}_leaderboard.json`
+
+Example: `23456789_leaderboard.json`
+
+---
+
+## 🌐 Leaderboard Website
+
+> **📢 The leaderboard submission website will be announced later.**
+> 
+> **📊 Baseline results will also be released for comparison.**
+
+Once the website is available, you will:
+1. Upload your JSON file to the submission portal
+2. The website will automatically validate and rank your submission
+3. Your results will appear on the public leaderboard
+
+---
+
 ## 🎯 Evaluation Metrics
 
 Your submission will be evaluated on **held-out test views** using the following metrics:

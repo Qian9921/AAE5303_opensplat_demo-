@@ -21,29 +21,65 @@ A **baseline implementation** is provided to help students understand the comple
 |-----------|-------|
 | **Dataset** | AMtown02 (1,380 images) |
 | **Training Iterations** | 300 |
-| **Downscale Factor** | 4× |
+| **Downscale Factor** | 4× (training resolution: 612×512) |
 | **Training Device** | CPU only |
 | **Training Time** | ~25 minutes |
 | **Initial Points** | 8.3M (from LiDAR merge) |
-| **Output Size** | 2.0 GB |
+| **Output Model Size** | 2.0 GB |
 
-### Baseline Performance
+### Baseline Training Performance
 
-| Metric | Value | Note |
-|--------|-------|------|
-| **Training Loss (Final)** | 0.0888 | Converged from 0.2164 |
-| **Loss Reduction** | 58.9% | Over 300 iterations |
-| **Estimated PSNR** | 20-22 dB | Approximate (requires test set evaluation) |
-| **Estimated SSIM** | 0.75-0.80 | Approximate (requires test set evaluation) |
+| Metric | Value | Description |
+|--------|-------|-------------|
+| **Initial Loss** | 0.2164 | Combined L1 + SSIM loss at step 1 |
+| **Final Loss** | 0.0888 | Loss at step 300 |
+| **Minimum Loss** | 0.0454 | Best loss achieved during training |
+| **Loss Reduction** | 58.9% | Improvement over 300 iterations |
+
+### Baseline Test Set Evaluation
+
+> **📢 Important Note on Evaluation**
+>
+> The baseline model has been trained, but **test set evaluation is pending**. The official baseline evaluation metrics (PSNR, SSIM, LPIPS) will be updated once:
+>
+> 1. ✅ **Test set is defined** - 138 images (10% of dataset, every ~10th image)
+> 2. ⏳ **Rendering tool is set up** - To render test views from the trained model
+> 3. ⏳ **Metrics are calculated** - Using the evaluation script provided
+>
+> **Current Status:** Test set indices are defined in [`../baseline/test_set_indices.json`](../baseline/test_set_indices.json).
+>
+> Students can proceed with training and will use the same test set for fair comparison.
+
+#### Expected Baseline Performance (Estimated)
+
+Based on training loss and typical 3DGS performance with similar configurations:
+
+| Metric | Estimated Range | Note |
+|--------|-----------------|------|
+| **PSNR** | 18-21 dB | Low due to limited iterations (300) and 4× downscaling |
+| **SSIM** | 0.70-0.75 | Moderate structural similarity |
+| **LPIPS** | 0.20-0.30 | Perceptual quality affected by low resolution training |
+
+> ⚠️ **These are rough estimates.** Actual evaluation will be performed and updated.
+>
+> Students are **strongly encouraged to surpass these estimates** by:
+> - Training for more iterations (3,000-30,000)
+> - Using smaller downscale factors
+> - Leveraging GPU acceleration
+> - Tuning hyperparameters
 
 📂 **Baseline Details**: See [../baseline/README.md](../baseline/README.md) for complete implementation details, training logs, and configuration.
+
+📊 **Evaluation Script**: [`../baseline/evaluate_baseline.py`](../baseline/evaluate_baseline.py) - Tool for calculating test set metrics
+
+---
 
 ### How to Beat the Baseline
 
 Students are encouraged to improve upon the baseline by:
 
 ✅ **Training Longer**: 300 → 3,000-30,000 iterations
-- Expected improvement: +3-8 dB PSNR
+- Expected improvement: +3-8 dB PSNR, +0.05-0.15 SSIM
 - Training time: 4-10+ hours on CPU, or 30 min - 2 hours on GPU
 
 ✅ **GPU Acceleration**: 50-100× faster than CPU
@@ -60,14 +96,23 @@ Students are encouraged to improve upon the baseline by:
 - Experiment with learning rates
 
 ✅ **Resolution Strategy**: Reduce downscaling if memory allows
-- Baseline uses 4× downscaling for memory
+- Baseline uses 4× downscaling for memory constraints
 - Try 2× or 1× if you have sufficient RAM/VRAM
+- Expected improvement: +2-5 dB PSNR per 2× resolution increase
 
 ---
 
 ## 📊 Evaluation Metrics
 
 The leaderboard evaluates submissions using three standard rendering quality metrics. All metrics are computed between **rendered images** and **ground truth images** on a held-out test set.
+
+### Test Set Definition
+
+- **Total Images**: 1,380 (AMtown02 sequence)
+- **Test Set Size**: 138 images (10% of dataset)
+- **Sampling**: Every ~10th image for uniform temporal coverage
+- **Test Indices**: Defined in `baseline/test_set_indices.json`
+- **Purpose**: Fair comparison across all submissions
 
 ---
 
@@ -324,110 +369,22 @@ def calculate_lpips(rendered: np.ndarray, ground_truth: np.ndarray) -> float:
 
 ## 📦 Complete Evaluation Script
 
-Use this script to compute all three metrics for your submission:
+Use the provided script to compute all three metrics for your submission:
 
-```python
-#!/usr/bin/env python3
-"""
-AAE5303 Leaderboard - Metrics Calculation Script
-"""
+**Location**: [`../baseline/evaluate_baseline.py`](../baseline/evaluate_baseline.py)
 
-import numpy as np
-import json
-from pathlib import Path
-from datetime import date
+```bash
+# Step 1: Generate test set definition (already done for baseline)
+python3 evaluate_baseline.py --test-set-only
 
-# Install required packages:
-# pip install numpy scikit-image torch lpips opencv-python
+# Step 2: Render test images from your trained model
+# (Use your Gaussian Splatting viewer/renderer)
 
-def load_image(path: str) -> np.ndarray:
-    """Load image as numpy array (H, W, C), uint8, RGB."""
-    import cv2
-    img = cv2.imread(path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    return img
-
-def calculate_metrics(rendered_dir: str, gt_dir: str) -> dict:
-    """
-    Calculate PSNR, SSIM, LPIPS for all image pairs.
-    
-    Args:
-        rendered_dir: Directory containing rendered images
-        gt_dir: Directory containing ground truth images
-    
-    Returns:
-        Dictionary with mean metrics
-    """
-    from skimage.metrics import peak_signal_noise_ratio, structural_similarity
-    import torch
-    import lpips
-    
-    # Initialize LPIPS
-    lpips_model = lpips.LPIPS(net='vgg')
-    
-    rendered_files = sorted(Path(rendered_dir).glob('*.png'))
-    
-    psnr_list, ssim_list, lpips_list = [], [], []
-    
-    for rendered_path in rendered_files:
-        gt_path = Path(gt_dir) / rendered_path.name
-        if not gt_path.exists():
-            continue
-        
-        rendered = load_image(str(rendered_path))
-        gt = load_image(str(gt_path))
-        
-        # PSNR
-        psnr = peak_signal_noise_ratio(gt, rendered, data_range=255)
-        psnr_list.append(psnr)
-        
-        # SSIM
-        ssim = structural_similarity(gt, rendered, channel_axis=2, data_range=255)
-        ssim_list.append(ssim)
-        
-        # LPIPS
-        rendered_t = torch.from_numpy(rendered).float().permute(2,0,1).unsqueeze(0) / 127.5 - 1
-        gt_t = torch.from_numpy(gt).float().permute(2,0,1).unsqueeze(0) / 127.5 - 1
-        with torch.no_grad():
-            lpips_val = lpips_model(rendered_t, gt_t).item()
-        lpips_list.append(lpips_val)
-    
-    return {
-        'psnr': round(np.mean(psnr_list), 2),
-        'ssim': round(np.mean(ssim_list), 4),
-        'lpips': round(np.mean(lpips_list), 4)
-    }
-
-def generate_submission_json(group_id: str, group_name: str, metrics: dict, output_path: str):
-    """Generate submission JSON file."""
-    submission = {
-        "group_id": group_id,
-        "group_name": group_name,
-        "metrics": metrics,
-        "submission_date": str(date.today())
-    }
-    
-    with open(output_path, 'w') as f:
-        json.dump(submission, f, indent=4)
-    
-    print(f"Submission saved to: {output_path}")
-    print(json.dumps(submission, indent=4))
-
-# Example usage:
-if __name__ == "__main__":
-    # Calculate metrics
-    metrics = calculate_metrics(
-        rendered_dir="./your_rendered_images/",
-        gt_dir="./ground_truth_images/"
-    )
-    
-    # Generate submission JSON
-    generate_submission_json(
-        group_id="Group_01",
-        group_name="Your Group Name",
-        metrics=metrics,
-        output_path="Group_01_leaderboard.json"
-    )
+# Step 3: Calculate metrics
+python3 evaluate_baseline.py \
+    --rendered ./your_rendered_test_images/ \
+    --gt ./ground_truth_test_images/ \
+    --output your_submission.json
 ```
 
 ---
@@ -471,6 +428,8 @@ Template file: [submission_template.json](./submission_template.json)
 
 - **Baseline Implementation**: [../baseline/README.md](../baseline/README.md)
 - **Submission Guide**: [LEADERBOARD_SUBMISSION_GUIDE.md](./LEADERBOARD_SUBMISSION_GUIDE.md)
+- **Evaluation Script**: [../baseline/evaluate_baseline.py](../baseline/evaluate_baseline.py)
+- **Test Set Definition**: [../baseline/test_set_indices.json](../baseline/test_set_indices.json)
 - **OpenSplat Documentation**: https://github.com/pierotofy/OpenSplat
 - **UAVScenes Dataset**: https://github.com/sijieaaa/UAVScenes
 - **3D Gaussian Splatting Paper**: Kerbl et al., SIGGRAPH 2023
